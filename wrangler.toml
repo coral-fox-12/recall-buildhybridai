@@ -1,0 +1,5 @@
+# Cloudflare Pages config for Recall (static site, no build step).
+# Deploy with:  npx wrangler pages deploy . --project-name recall-buildhybridai
+# (needs a Cloudflare API token — see DEPLOY.md; no token is stored here)
+name = "recall-buildhybridai"
+pages_build_output_dir = "."

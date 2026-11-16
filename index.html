@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recall — Offline-first AI study companion</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+<meta name="description" content="Turn your notes into flashcards, quizzes and study plans. Fast on-device AI with Gemini Nano, deep reasoning in the cloud with Gemini Flash — powered by Firebase AI Logic hybrid inference.">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js",
+    "firebase/app-check": "https://www.gstatic.com/firebasejs/12.5.0/firebase-app-check.js",
+    "firebase/ai": "https://www.gstatic.com/firebasejs/12.5.0/firebase-ai.js"
+  }
+}
+</script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">🧠</span>
+    <div>
+      <h1>Recall</h1>
+      <p class="tagline">Study anywhere. Your notes stay on your device unless you ask.</p>
+    </div>
+  </div>
+  <div class="engine-status" id="engineStatus" role="status">
+    <span class="dot" id="engineDot"></span>
+    <span id="engineLabel">Starting…</span>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ============ LEFT: notes ============ -->
+  <section class="panel notes-panel" aria-label="Your notes">
+    <div class="panel-head">
+      <h2>1 · Your notes</h2>
+      <span class="hint" id="notesHint">Paste lecture notes, a chapter, or a photo of your notebook.</span>
+    </div>
+
+    <label class="visually-hidden" for="notesInput">Your study notes</label>
+    <textarea id="notesInput" rows="12" spellcheck="false" aria-describedby="notesHint"
+      placeholder="Paste your study notes here…
+
+e.g. Photosynthesis is the process by which green plants convert sunlight, water and carbon dioxide into glucose and oxygen. It takes place in the chloroplasts, mainly in the leaves. Chlorophyll is the pigment that absorbs light energy…"></textarea>
+
+    <div class="notes-actions">
+      <button id="btnSample" class="btn ghost" type="button">Load sample notes</button>
+      <label class="btn ghost file-btn" for="notesImage">📷 Photo of notes
+        <input type="file" id="notesImage" accept="image/png,image/jpeg" class="visually-hidden">
+      </label>
+      <button id="btnClear" class="btn ghost" type="button">Clear</button>
+    </div>
+    <p class="img-note" id="imgNote" hidden>Photo attached: <span id="imgName"></span> — on-device Nano can read it directly.</p>
+
+    <div class="panel-head" style="margin-top:20px">
+      <h2>2 · Generate</h2>
+      <span class="hint">Quick tasks run on-device. Deep tasks use the cloud.</span>
+    </div>
+    <div class="gen-grid">
+      <button id="btnCards" class="btn primary" type="button">🗂️ Flashcards <span class="route-tag on">on-device</span></button>
+      <button id="btnQuiz" class="btn primary" type="button">❓ Quiz (5 questions) <span class="route-tag on">on-device</span></button>
+      <button id="btnPlan" class="btn primary" type="button">🗓️ 7-day study plan <span class="route-tag cloud">cloud</span></button>
+      <button id="btnExplain" class="btn primary" type="button">💡 Explain a concept <span class="route-tag cloud">cloud</span></button>
+    </div>
+
+    <div class="route-panel" id="routePanel">
+      <h3>How the hybrid engine routes</h3>
+      <dl>
+        <div><dt>On-device</dt><dd>Gemini Nano in Chrome — instant, offline, private, $0. Single-turn generation.</dd></div>
+        <div><dt>Cloud</dt><dd>Gemini Flash via Firebase AI Logic — deeper reasoning, grading, planning.</dd></div>
+        <div><dt>Fallback</dt><dd>If Nano is unavailable, quick tasks fall back to the cloud automatically.</dd></div>
+      </dl>
+      <div class="route-controls">
+        <label>Routing:
+          <select id="routeMode">
+            <option value="auto">Auto (prefer on-device)</option>
+            <option value="device">On-device only</option>
+            <option value="cloud">Cloud only</option>
+          </select>
+        </label>
+        <span class="net" id="netStatus"></span>
+      </div>
+      <p class="last-call" id="lastCall">No AI call yet.</p>
+    </div>
+  </section>
+
+  <!-- ============ RIGHT: results ============ -->
+  <section class="panel results-panel" aria-label="Results">
+    <div class="tabs" role="tablist" aria-label="Results">
+      <button class="tab active" id="tabbtn-cards" data-tab="cards" role="tab" type="button" aria-selected="true" aria-controls="tab-cards">Flashcards <span class="count" id="countCards"></span></button>
+      <button class="tab" id="tabbtn-quiz" data-tab="quiz" role="tab" type="button" aria-selected="false" aria-controls="tab-quiz" tabindex="-1">Quiz <span class="count" id="countQuiz"></span></button>
+      <button class="tab" id="tabbtn-plan" data-tab="plan" role="tab" type="button" aria-selected="false" aria-controls="tab-plan" tabindex="-1">Study plan</button>
+      <button class="tab" id="tabbtn-review" data-tab="review" role="tab" type="button" aria-selected="false" aria-controls="tab-review" tabindex="-1">Review due <span class="count" id="countReview"></span></button>
+    </div>
+
+    <div class="tab-page active" id="tab-cards" role="tabpanel" aria-labelledby="tabbtn-cards" tabindex="0">
+      <div class="empty" id="emptyCards">
+        <p class="empty-emoji" aria-hidden="true">🗂️</p>
+        <p>No flashcards yet. Paste notes and hit <b>Flashcards</b> — Nano builds a deck in under a second, even offline.</p>
+      </div>
+      <div class="deck" id="deck"></div>
+    </div>
+
+    <div class="tab-page" id="tab-quiz" role="tabpanel" aria-labelledby="tabbtn-quiz" tabindex="0">
+      <div class="empty" id="emptyQuiz">
+        <p class="empty-emoji" aria-hidden="true">❓</p>
+        <p>No quiz yet. Generate one from your notes, answer it, and let the cloud grade your free-text answers.</p>
+      </div>
+      <div id="quizBox"></div>
+      <div class="grade-box" id="gradeBox" hidden>
+        <h3>Free-text answer — cloud grading</h3>
+        <label for="freeQ">Question</label>
+        <select id="freeQ"></select>
+        <label for="freeA">Your answer</label>
+        <textarea id="freeA" rows="3" placeholder="Write your answer in your own words…"></textarea>
+        <button id="btnGrade" class="btn primary" type="button">Grade my answer <span class="route-tag cloud">cloud</span></button>
+        <div id="gradeResult" class="grade-result" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="tab-page" id="tab-plan" role="tabpanel" aria-labelledby="tabbtn-plan" tabindex="0">
+      <div class="empty" id="emptyPlan">
+        <p class="empty-emoji" aria-hidden="true">🗓️</p>
+        <p>No plan yet. The cloud reads your notes and your quiz results and builds a 7-day plan with daily goals.</p>
+      </div>
+      <div id="planBox" class="plan-box"></div>
+    </div>
+
+    <div class="tab-page" id="tab-review" role="tabpanel" aria-labelledby="tabbtn-review" tabindex="0">
+      <div class="empty" id="emptyReview">
+        <p class="empty-emoji" aria-hidden="true">🔁</p>
+        <p>Nothing due for review. Mark flashcards “Still learning” and they come back here on a spaced schedule.</p>
+      </div>
+      <div class="deck" id="reviewDeck"></div>
+    </div>
+
+    <div class="explain-box" id="explainBox" hidden>
+      <h3><span aria-hidden="true">💡</span> <span id="explainTitle"></span></h3>
+      <div id="explainBody"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Built for <b>#BuildHybridAI 2026</b> with Firebase AI Logic — hybrid inference: Gemini Nano on-device (Chrome Prompt API) with Gemini Flash cloud fallback. No notes leave your device for on-device tasks. Demo mode runs without a Firebase project so you can try the whole flow offline.</p>
+  <p class="foot-links"><a href="README.md">README</a> · <a href="https://firebase.google.com/docs/ai-logic/hybrid-on-device-inference" target="_blank" rel="noopener">Firebase AI Logic docs</a></p>
+</footer>
+
+<div class="toast" id="toast" role="alert" hidden></div>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
