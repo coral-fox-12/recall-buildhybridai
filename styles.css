@@ -291,7 +291,7 @@ textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset:
 .quiz-q .opt:hover { border-color: var(--accent); }
 .quiz-q .opt.correct { background: var(--on-bg); border-color: var(--on); font-weight: 700; }
 .quiz-q .opt.wrong { background: #fbe3e3; border-color: #b3261e; }
-.quiz-q .opt:disabled { cursor: default; opacity: 0.85; }
+.quiz-q .opt:disabled { cursor: default; opacity: 1; color: var(--ink); }
 .quiz-q .why { margin: 10px 0 0; font-size: 13px; color: var(--muted); display: none; }
 .quiz-q.answered .why { display: block; }
 .quiz-score { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; font-weight: 600; margin: 4px 0 14px; }

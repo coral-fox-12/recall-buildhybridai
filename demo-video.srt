@@ -1,0 +1,35 @@
+1
+00:00:01,000 --> 00:00:12,160
+Meet Recall, an offline-first AI study companion. It turns your notes into flashcards, a quiz, and a study plan — so you can study on a plane, in a library, or on bad wifi.
+
+2
+00:00:12,500 --> 00:00:18,212
+Quick tasks run on-device with Gemini Nano. Deep tasks go to Gemini Flash in the cloud.
+
+3
+00:00:21,110 --> 00:00:32,798
+Here are the flashcards, generated on-device. No network round-trip, no data leaves your device — and it works offline. Flip a card to test yourself, and mark anything you're unsure of as still learning.
+
+4
+00:00:37,980 --> 00:00:47,772
+The quiz runs on-device too. Watch: one answer right, one wrong — and the explanation appears either way, so you learn from every mistake. Your score updates live as you go.
+
+5
+00:00:54,490 --> 00:01:00,082
+Grading a free-text answer needs deeper reasoning, so this one goes to the cloud — Gemini Flash.
+
+6
+00:01:03,820 --> 00:01:12,892
+Recall builds a seven-day study plan from your notes and your quiz result — a little each day, with the weak spots up first. Scroll through the week and the plan is right there.
+
+7
+00:01:21,880 --> 00:01:27,880
+Stuck on a concept? Just ask. Recall explains it for you — in the cloud, in plain language.
+
+8
+00:01:30,610 --> 00:01:36,058
+Cards you marked still learning come back here, on a spaced schedule — right when you're about to forget them.
+
+9
+00:01:42,070 --> 00:01:49,270
+You can force either path with the routing switch. Firebase AI Logic hybrid inference — the same code, on every device.

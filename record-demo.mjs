@@ -13,7 +13,8 @@ const pw = require("/home/hatch/workspace/makefun/tools/shot/node_modules/playwr
 const execFileAsync = promisify(execFile);
 
 const DIR = path.resolve(import.meta.dirname);
-const PORT = 8123;
+const PORT = 8155; // unique port: sibling re-record agents also use 8123/8124 —
+// a stale sibling server on a shared port would silently serve the WRONG app.
 const CHROME = "/home/hatch/.cache/ms-playwright/chromium-1148/chrome-linux/chrome";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -24,13 +25,22 @@ const stopServer = () => { try { server.kill(); } catch {} };
 process.on("exit", stopServer);
 process.on("SIGINT", () => { stopServer(); process.exit(1); });
 
-// Wait for the static server to answer.
+// Wait for the static server to answer, and VERIFY it serves this app
+// (not a stale sibling server on the same port).
 for (let i = 0; i < 30; i++) {
   try {
     const res = await fetch(`http://127.0.0.1:${PORT}/index.html`);
     if (res.ok) break;
   } catch {}
   await sleep(500);
+}
+{
+  const html = await (await fetch(`http://127.0.0.1:${PORT}/index.html`)).text();
+  if (!html.includes("notes in, knowledge out")) {
+    stopServer();
+    throw new Error(`WRONG SERVER on port ${PORT}: index.html is not the Recall app — aborting`);
+  }
+  console.log(`Serving verified: Recall app on port ${PORT}`);
 }
 
 const browser = await pw.chromium.launch({
@@ -48,17 +58,14 @@ const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 
+// Captions are DISABLED for the re-record: narration is a separate audio
+// track + an .srt sidecar, nothing is burned into the picture. caption()
+// is now a no-op that only logs the beat time (ms since t0) for narration
+// timing.
+const T0 = Date.now();
 async function caption(text) {
-  await page.evaluate((t) => {
-    let el = document.getElementById("__cap");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "__cap";
-      el.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:1100px;background:rgba(10,15,25,.88);color:#fff;font:500 19px/1.45 system-ui,sans-serif;padding:10px 20px;border-radius:12px;z-index:99999;text-align:center;pointer-events:none;box-shadow:0 4px 18px rgba(0,0,0,.35)";
-      document.body.appendChild(el);
-    }
-    el.textContent = t;
-  }, text);
+  const t = ((Date.now() - T0) / 1000).toFixed(2);
+  console.log(`[BEAT ${t}s] ${text}`);
 }
 
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: "networkidle" });
@@ -144,6 +151,8 @@ await sleep(2000);
 await page.click("#btnCards");
 await page.waitForSelector("#deck .card", { timeout: 10000 });
 await sleep(2500);
+await page.evaluate(() => document.getElementById("deck").scrollIntoView({ block: "start" }));
+await sleep(1500);
 await caption("Force either path with the routing switch. Firebase AI Logic hybrid inference — same code, every device.");
 await sleep(9000);
 
@@ -155,7 +164,7 @@ await browser.close();
 stopServer();
 
 const webmPath = await video.path();
-const mp4Path = path.join(DIR, "demo-video.mp4");
+const mp4Path = path.join(DIR, "demo-video-clean.mp4"); // silent intermediate; narration muxed into demo-video.mp4 afterwards
 await execFileAsync("ffmpeg", ["-y", "-i", webmPath, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-preset", "medium", "-an", mp4Path], { timeout: 120000 });
 fs.unlinkSync(webmPath);
 const { stdout } = await execFileAsync("ffprobe", ["-v", "error", "-show_entries", "format=duration,size", "-show_entries", "stream=width,height,codec_name", "-of", "json", mp4Path]);
