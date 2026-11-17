@@ -312,7 +312,7 @@ async function runCards() {
     toast(`Flashcards failed: ${e.message}`);
   } finally {
     setBusy(btn, false);
-    btn.innerHTML = '🗂️ Flashcards <span class="route-tag on">on-device</span>';
+    btn.innerHTML = '<span class="gen-no">01</span><span class="gen-label">Flashcards</span> <span class="route-tag on">on-device</span>';
   }
 }
 
@@ -331,7 +331,7 @@ async function runQuiz() {
     toast(`Quiz failed: ${e.message}`);
   } finally {
     setBusy(btn, false);
-    btn.innerHTML = '❓ Quiz (5 questions) <span class="route-tag on">on-device</span>';
+    btn.innerHTML = '<span class="gen-no">02</span><span class="gen-label">Quiz (5 questions)</span> <span class="route-tag on">on-device</span>';
   }
 }
 
@@ -356,7 +356,7 @@ async function runPlan() {
     toast(`Study plan failed: ${e.message}`);
   } finally {
     setBusy(btn, false);
-    btn.innerHTML = '🗓️ 7-day study plan <span class="route-tag cloud">cloud</span>';
+    btn.innerHTML = '<span class="gen-no">03</span><span class="gen-label">7-day study plan</span> <span class="route-tag cloud">cloud</span>';
   }
 }
 

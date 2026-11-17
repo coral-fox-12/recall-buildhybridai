@@ -108,7 +108,7 @@ errors, 0 failed requests**. The test also refreshes the screenshots above.
 - All form fields have labels; async results (grading, explanations) use
   `aria-live="polite"`; the toast uses `role="alert"`.
 - Text contrast is ≥ 4.5:1 throughout, including the route badges and the
-  engine-status pill in the header. Decorative emoji are `aria-hidden`.
+  engine-status record box in the masthead. No decorative emoji are used.
 
 ## Built during the submission period
 
@@ -124,7 +124,10 @@ headless test suite, and the demo video. No pre-existing code was reused.
 
 ```
 index.html            App shell + Firebase import map
-styles.css            Design system
+styles.css            Design system ("the card catalogue": Newsreader +
+                      IBM Plex Mono, paper/ink/oxblood, hairline rules)
+fonts/                Self-hosted woff2 (Newsreader, IBM Plex Mono) — the
+                      site makes zero external font requests
 src/
   config.js           Firebase config (placeholders) + App Check settings
   app.js              UI controller

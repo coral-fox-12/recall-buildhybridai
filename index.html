@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Recall — Offline-first AI study companion</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%237c2230'/><text x='50' y='74' font-size='66' font-family='Georgia,serif' fill='%23f6f2e7' text-anchor='middle'>R</text></svg>">
 <meta name="description" content="Turn your notes into flashcards, quizzes and study plans. Fast on-device AI with Gemini Nano, deep reasoning in the cloud with Gemini Flash — powered by Firebase AI Logic hybrid inference.">
 <link rel="stylesheet" href="styles.css">
 <script type="importmap">
@@ -20,15 +20,16 @@
 <body>
 <header class="topbar">
   <div class="brand">
-    <span class="logo" aria-hidden="true">🧠</span>
+    <span class="logo" aria-hidden="true">R</span>
     <div>
-      <h1>Recall</h1>
+      <p class="kicker">Build with Hybrid AI 2026 &middot; Firebase AI Logic</p>
+      <h1>Recall <em>&mdash; notes in, knowledge out</em></h1>
       <p class="tagline">Study anywhere. Your notes stay on your device unless you ask.</p>
     </div>
   </div>
   <div class="engine-status" id="engineStatus" role="status">
-    <span class="dot" id="engineDot"></span>
-    <span id="engineLabel">Starting…</span>
+    <span class="engine-label">Engine</span>
+    <span class="engine-line"><span class="dot" id="engineDot"></span><span id="engineLabel">Starting…</span></span>
   </div>
 </header>
 
@@ -36,8 +37,9 @@
   <!-- ============ LEFT: notes ============ -->
   <section class="panel notes-panel" aria-label="Your notes">
     <div class="panel-head">
-      <h2>1 · Your notes</h2>
-      <span class="hint" id="notesHint">Paste lecture notes, a chapter, or a photo of your notebook.</span>
+      <p class="kicker">01 &mdash; Notes</p>
+      <h2>Your notes</h2>
+      <p class="hint" id="notesHint">Paste lecture notes, a chapter, or a photo of your notebook.</p>
     </div>
 
     <label class="visually-hidden" for="notesInput">Your study notes</label>
@@ -48,7 +50,7 @@ e.g. Photosynthesis is the process by which green plants convert sunlight, water
 
     <div class="notes-actions">
       <button id="btnSample" class="btn ghost" type="button">Load sample notes</button>
-      <label class="btn ghost file-btn" for="notesImage">📷 Photo of notes
+      <label class="btn ghost file-btn" for="notesImage">Photo of notes
         <input type="file" id="notesImage" accept="image/png,image/jpeg" class="visually-hidden">
       </label>
       <button id="btnClear" class="btn ghost" type="button">Clear</button>
@@ -56,14 +58,15 @@ e.g. Photosynthesis is the process by which green plants convert sunlight, water
     <p class="img-note" id="imgNote" hidden>Photo attached: <span id="imgName"></span> — on-device Nano can read it directly.</p>
 
     <div class="panel-head" style="margin-top:20px">
-      <h2>2 · Generate</h2>
-      <span class="hint">Quick tasks run on-device. Deep tasks use the cloud.</span>
+      <p class="kicker">02 &mdash; Generate</p>
+      <h2>Generate</h2>
+      <p class="hint">Quick tasks run on-device. Deep tasks use the cloud.</p>
     </div>
     <div class="gen-grid">
-      <button id="btnCards" class="btn primary" type="button">🗂️ Flashcards <span class="route-tag on">on-device</span></button>
-      <button id="btnQuiz" class="btn primary" type="button">❓ Quiz (5 questions) <span class="route-tag on">on-device</span></button>
-      <button id="btnPlan" class="btn primary" type="button">🗓️ 7-day study plan <span class="route-tag cloud">cloud</span></button>
-      <button id="btnExplain" class="btn primary" type="button">💡 Explain a concept <span class="route-tag cloud">cloud</span></button>
+      <button id="btnCards" class="btn primary" type="button"><span class="gen-no">01</span><span class="gen-label">Flashcards</span><span class="route-tag on">on-device</span></button>
+      <button id="btnQuiz" class="btn primary" type="button"><span class="gen-no">02</span><span class="gen-label">Quiz (5 questions)</span><span class="route-tag on">on-device</span></button>
+      <button id="btnPlan" class="btn primary" type="button"><span class="gen-no">03</span><span class="gen-label">7-day study plan</span><span class="route-tag cloud">cloud</span></button>
+      <button id="btnExplain" class="btn primary" type="button"><span class="gen-no">04</span><span class="gen-label">Explain a concept</span><span class="route-tag cloud">cloud</span></button>
     </div>
 
     <div class="route-panel" id="routePanel">
@@ -98,7 +101,7 @@ e.g. Photosynthesis is the process by which green plants convert sunlight, water
 
     <div class="tab-page active" id="tab-cards" role="tabpanel" aria-labelledby="tabbtn-cards" tabindex="0">
       <div class="empty" id="emptyCards">
-        <p class="empty-emoji" aria-hidden="true">🗂️</p>
+        <p class="empty-kicker">Empty deck</p>
         <p>No flashcards yet. Paste notes and hit <b>Flashcards</b> — Nano builds a deck in under a second, even offline.</p>
       </div>
       <div class="deck" id="deck"></div>
@@ -106,7 +109,7 @@ e.g. Photosynthesis is the process by which green plants convert sunlight, water
 
     <div class="tab-page" id="tab-quiz" role="tabpanel" aria-labelledby="tabbtn-quiz" tabindex="0">
       <div class="empty" id="emptyQuiz">
-        <p class="empty-emoji" aria-hidden="true">❓</p>
+        <p class="empty-kicker">No quiz yet</p>
         <p>No quiz yet. Generate one from your notes, answer it, and let the cloud grade your free-text answers.</p>
       </div>
       <div id="quizBox"></div>
@@ -123,7 +126,7 @@ e.g. Photosynthesis is the process by which green plants convert sunlight, water
 
     <div class="tab-page" id="tab-plan" role="tabpanel" aria-labelledby="tabbtn-plan" tabindex="0">
       <div class="empty" id="emptyPlan">
-        <p class="empty-emoji" aria-hidden="true">🗓️</p>
+        <p class="empty-kicker">No plan yet</p>
         <p>No plan yet. The cloud reads your notes and your quiz results and builds a 7-day plan with daily goals.</p>
       </div>
       <div id="planBox" class="plan-box"></div>
@@ -131,14 +134,14 @@ e.g. Photosynthesis is the process by which green plants convert sunlight, water
 
     <div class="tab-page" id="tab-review" role="tabpanel" aria-labelledby="tabbtn-review" tabindex="0">
       <div class="empty" id="emptyReview">
-        <p class="empty-emoji" aria-hidden="true">🔁</p>
+        <p class="empty-kicker">Nothing due</p>
         <p>Nothing due for review. Mark flashcards “Still learning” and they come back here on a spaced schedule.</p>
       </div>
       <div class="deck" id="reviewDeck"></div>
     </div>
 
     <div class="explain-box" id="explainBox" hidden>
-      <h3><span aria-hidden="true">💡</span> <span id="explainTitle"></span></h3>
+      <h3><span id="explainTitle"></span></h3>
       <div id="explainBody"></div>
     </div>
   </section>
