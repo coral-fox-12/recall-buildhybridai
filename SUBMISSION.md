@@ -24,8 +24,15 @@ Best Web/Chrome $3,000 · Best Android $3,000 · Best iOS $3,000.
 - [x] Tested headlessly (`node test.mjs`, 23 checks — full flow incl.
   keyboard card flip, arrow-key tab navigation, grading, plan, explain,
   review queue, routing switch, reload persistence; 0 console errors,
-  0 failed requests; last run 2026-11-17, all passed). Screenshots
-  refreshed by the same run.
+  0 failed requests; last run 2026-11-17, all passed **against the live
+  direct-Gemini engine**, not the demo stub). Screenshots refreshed by the
+  same run.
+- [x] Gemini key wired + live: `src/gemini-key.js` (gitignored, never
+  committed) holds a real Gemini Developer API key; the app runs on the
+  direct-key engine (`gemini-3-flash-preview`, fallback `gemini-3.8-flash`)
+  and the deployed site https://recall-buildhybridai.surge.sh was verified
+  end-to-end in a browser (11 real flashcards in ~6s, engine label "Live —
+  cloud Gemini Flash"). See README "How the live demo is wired".
 - [x] Accessibility pass: labelled fields, WAI-ARIA tabs with arrow-key
   navigation, keyboard-flippable cards, focusable photo picker, visible
   `:focus-visible` outlines, `aria-live` results, ≥ 4.5:1 contrast.
@@ -35,18 +42,23 @@ Best Web/Chrome $3,000 · Best Android $3,000 · Best iOS $3,000.
 
 ## Still missing before submit (parent / user steps)
 
-1. **Firebase project + Gemini key** — create a Firebase project, run the
-   AI Logic guided setup (Gemini Developer API, free tier), paste the
-   config into `src/config.js`, register the App Check debug token.
-   Then re-test once with the real engine (one flashcard + one cloud call)
-   and record the demo video against the live engine.
+1. **Firebase project** (Gemini key is DONE — see above) — create a
+   Firebase project, run the AI Logic guided setup (Gemini Developer API,
+   free tier), paste the config into `src/config.js`, register the App
+   Check debug token. **BLOCKED:** the agent Google account
+   coral-fox-12@proton.me is stuck at phone QR verification, so no Firebase
+   project can be created under it yet. The live demo does not need it
+   (direct Gemini key + localStorage), but the submission framing says
+   "Firebase AI Logic" — the parent must decide whether to frame the entry
+   on the live direct-key engine or wait for a Firebase project.
    - Optional: apply for extra quota via the Quota Form — Sprint 2 request
      by **Nov 18 10:00 PT** (≈ 01:00 VN Nov 19), Sprint 3 by Nov 25 10:00 PT.
      The free tier is enough for the demo; quota is only needed for heavy
      judging traffic.
-2. **Host the app** — deploy to Firebase App Hosting (`firebase.json` is
-   included) or any static host; the submission needs a public URL for
-   judging. (Localhost is not enough.)
+2. **Host the app** — DONE: deployed to Surge,
+   https://recall-buildhybridai.surge.sh (verified live, byte-identical to
+   local). Firebase App Hosting remains an option if a Firebase project is
+   created.
 3. **Public GitHub repo** — push this folder to a public repo with the
    Apache 2.0 license visible.
 4. **Demo video (≤ 3 min)** — record per `DEMO_SCRIPT.md`, upload to

@@ -23,6 +23,21 @@ Every AI answer shows a **route badge** (on-device / cloud / demo), latency
 and model name, so the hybrid behaviour is visible, not claimed. A routing
 switch (Auto / On-device only / Cloud only) lets judges force each path.
 
+## How the live demo is wired (2026-11-17)
+
+The deployed demo at https://recall-buildhybridai.surge.sh runs on a
+**direct Gemini Developer API key** (`src/gemini-key.js`, gitignored, never
+committed): model `gemini-3-flash-preview` with fallback
+`gemini-3.8-flash`, retries on 429/503/timeouts, JSON `responseSchema` for
+flashcards/quiz/grading — verified live end-to-end (11 flashcards, 5 quiz
+questions, grading, 7-day plan; `node test.mjs` 23/23). No Firebase project
+exists yet — the agent Google account is stuck at phone verification, so
+the Firebase AI Logic path (`RealEngine`) stays in the repo and activates
+automatically the moment a project is configured in `src/config.js`; until
+then the direct key is the live engine and the deterministic stub is only
+the last-resort fallback (no key file at all). Storage is pure
+`localStorage` in every mode, so Firebase is not needed for the demo flow.
+
 ## Tech
 
 - **Firebase AI Logic** (`firebase/ai` v12.5.0+): `getAI` with
@@ -36,9 +51,11 @@ switch (Auto / On-device only / Cloud only) lets judges force each path.
 - **Offline-first storage:** decks, quiz results and the spaced-repetition
   review queue (SM-2-lite) live in `localStorage`. Firestore sync is a
   documented follow-up, not a dependency.
-- **Demo mode:** with no Firebase project configured, a deterministic local
-  stub engine implements the exact same interface, so the whole flow is
-  testable offline with zero keys. The UI always labels demo answers.
+- **Demo mode:** with no key file and no Firebase project configured, a
+  deterministic local stub engine implements the exact same interface, so
+  the whole flow is testable offline with zero keys. The UI always labels
+  demo answers. (The deployed site does not use demo mode — it runs on the
+  direct Gemini key above.)
 
 ## Run it
 
@@ -51,7 +68,8 @@ python3 -m http.server 8080
 On-device Nano needs **Chrome 139+ on Desktop** with the flag
 `chrome://flags/#prompt-api-for-gemini-nano-multimodal-input` enabled.
 Without it (or without a Firebase project) the app still works: quick tasks
-fall back to the cloud, and without keys it runs in demo mode.
+fall back to the cloud via the direct Gemini key, and without any key at all
+it runs in demo mode.
 
 ### Wire up Firebase (5 minutes, free tier)
 

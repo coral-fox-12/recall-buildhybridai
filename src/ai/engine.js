@@ -1,13 +1,18 @@
 // Hybrid AI engine for Recall.
 //
-// One interface, two implementations:
+// One interface, three implementations:
 //   - RealEngine: Firebase AI Logic (firebase/ai, SDK v12.5.0+) with hybrid
 //     inference. Quick single-turn tasks use InferenceMode.PREFER_ON_DEVICE
 //     (Gemini Nano in Chrome via the Prompt API, falling back to Gemini Flash
 //     in the cloud); deep tasks use ONLY_IN_CLOUD (Gemini Flash).
+//   - DirectGeminiEngine: calls the Gemini Developer API directly with a
+//     local API key (src/gemini-key.js, gitignored, injected at deploy
+//     time). Used when no Firebase project is configured but a key is
+//     present, so the app runs live without Firebase. All calls route to
+//     the cloud model; there is no on-device path here.
 //   - DemoEngine: deterministic local stub with the exact same interface,
-//     used when no Firebase project is configured, so the whole app is
-//     testable offline with zero keys. The UI always labels which engine
+//     used when neither Firebase nor a key is configured, so the whole app
+//     is testable offline with zero keys. The UI always labels which engine
 //     answered, so a demo answer is never mistaken for a real one.
 //
 // Route reporting: for the real engine the route is determined by checking
@@ -261,6 +266,179 @@ class DemoEngine {
 }
 
 // ---------------------------------------------------------------------------
+// Direct engine: Gemini Developer API with a local key (no Firebase needed)
+// ---------------------------------------------------------------------------
+
+// gemini-2.5-flash is retired for new API keys (API returns 404 "no longer
+// available to new users"). gemini-3.8-flash was the API's recommended
+// replacement and answered at first, but within minutes it went
+// overloaded (503s and 60s+ timeouts, observed 2026-11-17 17:25+07);
+// gemini-3-flash-preview answers in ~1.5s, so it is primary and
+// 3.8-flash is the fallback. Retries cover transient 429/503s and stalls.
+const DIRECT_MODEL = "gemini-3-flash-preview";
+const DIRECT_FALLBACK_MODEL = "gemini-3.8-flash";
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta";
+
+class DirectGeminiEngine {
+  constructor(apiKey) {
+    this.kind = "direct";
+    this.onDeviceAvailable = false;
+    this.routeMode = "auto";
+    this._apiKey = apiKey;
+  }
+
+  async init() {
+    return { mode: "direct", onDeviceAvailable: false };
+  }
+
+  async _generate(prompt, schema, image) {
+    const t0 = performance.now();
+    const parts = [{ text: prompt }];
+    if (image) {
+      parts.push({
+        inlineData: {
+          mimeType: image.mimeType,
+          data: image.dataUrl.split(",")[1],
+        },
+      });
+    }
+    const body = { contents: [{ parts }] };
+    if (schema) {
+      body.generationConfig = {
+        responseMimeType: "application/json",
+        responseSchema: schema,
+      };
+    }
+    let lastErr = null;
+    for (const model of [DIRECT_MODEL, DIRECT_FALLBACK_MODEL]) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(
+            `${GEMINI_API}/models/${model}:generateContent?key=${encodeURIComponent(this._apiKey)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+              signal: AbortSignal.timeout(60000),
+            },
+          );
+          if (res.status === 429 || res.status === 503) {
+            lastErr = new Error(
+              `Gemini API ${res.status} (model ${model}, overloaded)`,
+            );
+            await sleep(2000 * (attempt + 1));
+            continue;
+          }
+          if (res.status === 404) break; // model retired — try the fallback
+          if (!res.ok) {
+            const err = await res.text().catch(() => "");
+            throw new Error(`Gemini API ${res.status}: ${err.slice(0, 200)}`);
+          }
+          const data = await res.json();
+          const text =
+            data.candidates?.[0]?.content?.parts
+              ?.map((p) => p.text ?? "")
+              .join("") ?? "";
+          return {
+            text: stripJsonFence(text),
+            latencyMs: Math.round(performance.now() - t0),
+            model,
+          };
+        } catch (e) {
+          lastErr = e;
+          // Retry stalls, overloads and network blips; anything else
+          // (bad key, bad request) fails fast.
+          const retryable =
+            e.name === "TimeoutError" ||
+            e.name === "AbortError" ||
+            e instanceof TypeError;
+          if (retryable) {
+            await sleep(2000 * (attempt + 1));
+            continue;
+          }
+          throw e;
+        }
+      }
+    }
+    throw lastErr ?? new Error("Gemini API failed");
+  }
+
+  async generateFlashcards(notes, image) {
+    const prompt =
+      flashcardsPrompt(notes) +
+      (image
+        ? "\nA photo of handwritten notes is attached — use it together with the text above."
+        : "");
+    const { text, latencyMs, model } = await this._generate(
+      prompt,
+      FLASHCARDS_SCHEMA,
+      image,
+    );
+    const data = JSON.parse(text);
+    return {
+      cards: data.cards ?? [],
+      route: "cloud",
+      latencyMs,
+      model: `${model} (cloud)`,
+    };
+  }
+
+  async generateQuiz(notes) {
+    const { text, latencyMs, model } = await this._generate(
+      quizPrompt(notes),
+      QUIZ_SCHEMA,
+    );
+    const data = JSON.parse(text);
+    return {
+      questions: data.questions ?? [],
+      route: "cloud",
+      latencyMs,
+      model: `${model} (cloud)`,
+    };
+  }
+
+  async gradeAnswer(question, answer, notes) {
+    const { text, latencyMs, model } = await this._generate(
+      gradePrompt(question, answer, notes),
+      GRADE_SCHEMA,
+    );
+    const data = JSON.parse(text);
+    return {
+      ...data,
+      route: "cloud",
+      latencyMs,
+      model: `${model} (cloud)`,
+    };
+  }
+
+  async explain(topic, notes) {
+    const { text, latencyMs, model } = await this._generate(
+      explainPrompt(topic, notes),
+      null,
+    );
+    return {
+      text,
+      route: "cloud",
+      latencyMs,
+      model: `${model} (cloud)`,
+    };
+  }
+
+  async studyPlan(notes, quizSummary) {
+    const { text, latencyMs, model } = await this._generate(
+      planPrompt(notes, quizSummary),
+      null,
+    );
+    return {
+      text,
+      route: "cloud",
+      latencyMs,
+      model: `${model} (cloud)`,
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Real engine: Firebase AI Logic, hybrid inference
 // ---------------------------------------------------------------------------
 
@@ -420,6 +598,19 @@ class RealEngine {
 
 export async function createEngine() {
   if (!isConfigured()) {
+    // No Firebase project: try the direct Gemini key (src/gemini-key.js,
+    // gitignored, injected at deploy time). Falls through to the demo
+    // stub when the file is absent or the key is a placeholder.
+    try {
+      const { geminiApiKey } = await import("../gemini-key.js");
+      if (geminiApiKey && !geminiApiKey.startsWith("YOUR_")) {
+        const direct = new DirectGeminiEngine(geminiApiKey);
+        await direct.init();
+        return direct;
+      }
+    } catch {
+      // No key file — demo mode.
+    }
     const demo = new DemoEngine();
     await demo.init();
     return demo;

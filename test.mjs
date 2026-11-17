@@ -1,4 +1,7 @@
-// Headless test for Recall (demo mode — no Firebase project, no keys).
+// Headless test for Recall (live direct-Gemini mode — src/gemini-key.js
+// must exist; the engine calls the real Gemini API, so Chromium needs
+// internet: run with RECALL_PROXY=1 plus the local forward proxy on
+// 127.0.0.1:18080, see below).
 // Runs the full user flow in Chromium and fails on any console error,
 // page error, or failed request. Also refreshes screenshots/*.png.
 // Run: node test.mjs   (from this folder)
@@ -39,7 +42,15 @@ for (let i = 0; i < 30; i++) {
 const browser = await pw.chromium.launch({
   executablePath: CHROME,
   headless: true,
-  args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  // The VM egress proxy needs credentials Chromium mishandles; route it
+  // through the unauthenticated local forward proxy (127.0.0.1:18080)
+  // when RECALL_PROXY=1 so the live Gemini calls can reach the internet.
+  // The forward proxy MITM-re-signs TLS with its own CA, which Chromium
+  // rejects (ERR_CERT_AUTHORITY_INVALID) — ignore cert errors ONLY in
+  // this proxied test run. Real browsers on the live site see Google's
+  // valid certificate and do not need this.
+  args: ["--no-sandbox", "--disable-dev-shm-usage",
+    ...(process.env.RECALL_PROXY ? ["--proxy-server=http://127.0.0.1:18080", "--ignore-certificate-errors"] : [])],
 });
 const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 const page = await context.newPage();
@@ -54,8 +65,8 @@ try {
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: "networkidle" });
   await page.waitForFunction(() => window.__recallReady === true, null, { timeout: 15000 });
   check("page loads and app boots", true);
-  check("engine is demo stub (no Firebase project)", await page.evaluate(() => window.__recallEngine === "demo"));
-  check("engine status labels demo mode", (await page.textContent("#engineLabel")).includes("Demo mode"));
+  check("engine is direct Gemini (live key, no Firebase project)", await page.evaluate(() => window.__recallEngine === "direct"));
+  check("engine status labels live mode", (await page.textContent("#engineLabel")).includes("Live"));
 
   // --- Accessibility basics on load ---
   check("notes textarea has a label", await page.evaluate(() => {
@@ -77,7 +88,7 @@ try {
   // --- Flashcards ---
   await page.click("#btnSample");
   await page.click("#btnCards");
-  await page.waitForSelector("#deck .card", { timeout: 10000 });
+  await page.waitForSelector("#deck .card", { timeout: 60000 });
   const cardCount = await page.locator("#deck .card").count();
   check("flashcards generated (≥4)", cardCount >= 4, `${cardCount} cards`);
   await page.screenshot({ path: path.join(DIR, "screenshots/01-flashcards.png") });
@@ -98,7 +109,7 @@ try {
 
   // --- Quiz ---
   await page.click("#btnQuiz");
-  await page.waitForSelector(".quiz-q", { timeout: 10000 });
+  await page.waitForSelector(".quiz-q", { timeout: 60000 });
   const quiz = await page.evaluate(() => JSON.parse(localStorage.getItem("recall.v1")).lastQuiz.questions);
   check("quiz has exactly 5 questions", quiz.length === 5);
   const q0 = page.locator(".quiz-q").nth(0);
@@ -115,13 +126,13 @@ try {
   // --- Cloud grading (demo stub) ---
   await page.fill("#freeA", "Photosynthesis is how green plants turn sunlight, water and carbon dioxide into glucose and oxygen, using chlorophyll in the chloroplasts.");
   await page.click("#btnGrade");
-  await page.waitForSelector("#gradeResult .score", { timeout: 10000 });
+  await page.waitForSelector("#gradeResult .score", { timeout: 60000 });
   const grade = Number((await page.textContent("#gradeResult .score")).replace("/100", ""));
   check("free-text grading returns a score", grade > 50, `score ${grade}/100`);
 
   // --- Study plan ---
   await page.click("#btnPlan");
-  await page.waitForSelector("#planBox .day", { timeout: 10000 });
+  await page.waitForSelector("#planBox .day", { timeout: 60000 });
   const dayCount = await page.locator("#planBox .day").count();
   check("7-day plan rendered", dayCount === 7, `${dayCount} days`);
   await page.screenshot({ path: path.join(DIR, "screenshots/03-plan.png") });
@@ -131,7 +142,7 @@ try {
   await page.waitForSelector("#explainTopic", { timeout: 5000 });
   await page.fill("#explainTopic", "the Calvin cycle");
   await page.click("#btnExplainGo");
-  await page.waitForSelector("#explainOut p", { timeout: 10000 });
+  await page.waitForSelector("#explainOut p", { timeout: 60000 });
   check("explain returns text", (await page.textContent("#explainOut")).length > 100);
   await page.screenshot({ path: path.join(DIR, "screenshots/04-explain.png") });
 
@@ -145,10 +156,16 @@ try {
     document.activeElement.id === "tabbtn-cards"
     && document.getElementById("tabbtn-cards").getAttribute("aria-selected") === "true"));
 
-  // --- Routing switch: force on-device, regenerate (demo stub still answers) ---
+  // --- Routing switch: force on-device, regenerate (direct engine still answers via cloud) ---
   await page.selectOption("#routeMode", "device");
+  const lastCallBefore = await page.textContent("#lastCall");
   await page.click("#btnCards");
-  await page.waitForSelector("#deck .card", { timeout: 10000 });
+  // The deck already has cards from the first generation, so waiting for
+  // "#deck .card" would pass on the stale deck while the new call is
+  // still in flight — and the reload below would abort it
+  // (net::ERR_ABORTED). Wait for the call to actually finish by watching
+  // #lastCall change.
+  await page.waitForFunction((prev) => document.getElementById("lastCall").textContent !== prev, lastCallBefore, { timeout: 60000 });
   check("routing switch to on-device-only still generates", (await page.locator("#deck .card").count()) >= 4);
 
   // --- Persistence across reload ---

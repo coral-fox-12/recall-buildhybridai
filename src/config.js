@@ -16,6 +16,15 @@
 //      with placeholders in the repo; inject real values at deploy time
 //      (e.g. Firebase App Hosting environment config).
 //
+// DIRECT-KEY ALTERNATIVE (no Firebase project needed): if this file still
+// holds placeholders but src/gemini-key.js exists (gitignored, injected at
+// deploy time, exports geminiApiKey), the engine calls the Gemini Developer
+// API directly with that key and the app runs live. That is how the
+// deployed demo currently works — the agent Google account cannot finish
+// creation (phone verification), so no Firebase project exists yet.
+// NOTE: gemini-2.5-flash is retired for new API keys; the direct engine
+// uses gemini-3.8-flash (see src/ai/engine.js).
+//
 // Until the config is filled in, the app runs in DEMO MODE: a local,
 // deterministic stub engine implements the exact same interface as the
 // real hybrid engine, so the whole flow (flashcards, quiz, grading, plan)

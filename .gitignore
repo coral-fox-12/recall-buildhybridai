@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store
 *.log
+# Local Gemini Developer API key for the direct-key engine (never commit).
+src/gemini-key.js
